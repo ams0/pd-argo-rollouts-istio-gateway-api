@@ -1,11 +1,11 @@
 # Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts
 
-As presented at Cloud Native Rejekts in Paris in March 2024
+As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support!
 
 
 ## Prerequisite
 
-- A kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
+- **Two** kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
 
 
 ## Setup
@@ -30,7 +30,11 @@ brew install argoproj/tap/kubectl-argo-rollouts
 ### (Optional) Create an IP in Civo and setup DNS
 
 ```bash
-civo ip reserve -n kube
+civo ip reserve -n kube1
+civo ip reserve -n kube2
+
+civo ip list -o custom -f address,name | grep kube1
+civo ip list -o custom -f address,name | grep kube2
 ```
 
 Now go and set up a DNS record (I use `*.rejekts.kubespaces.io`) with your favorite DNS provider (I use Azure DNS). Something along the lines:
@@ -68,7 +72,35 @@ kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/downloa
 ```bash
 istioctl install --set meshConfig.accessLogFile=/dev/stdout -y \
  --set "values.gateways.istio-ingressgateway.serviceAnnotations.kubernetes\.civo\.com/ipv4-address=74.220.28.53"
+```
 
+Multicluster version:
+
+```bash
+export CTX_CLUSTER1=rejekts
+export CTX_CLUSTER2=rejekts2
+```
+
+```bash
+istioctl --context=$CTX_CLUSTER1 install --set meshConfig.accessLogFile=/dev/stdout -y \
+ --set "components.ingressGateways[0].enabled=true" --set "components.ingressGateways[0].name=istio-ingressgateway" \
+ --set "components.ingressGateways[1].enabled=true" --set "components.ingressGateways[1].name=istio-ewgw"  \
+ --set "components.ingressGateways[0].k8s.serviceAnnotations.kubernetes\.civo\.com/ipv4-address=74.220.28.53" \
+ --set values.global.meshID=rejekts --set values.global.multiCluster.clusterName=rejekts1 --set values.global.network=rejekts
+```
+
+Cluster 2 doesn't need public ingress
+```bash
+istioctl --context=$CTX_CLUSTER2 install --set meshConfig.accessLogFile=/dev/stdout -y \
+ --set "components.ingressGateways[0].enabled=true" --set "components.ingressGateways[0].name=istio-ewgw" \
+ --set values.global.meshID=rejekts --set values.global.multiCluster.clusterName=rejekts2 --set values.global.network=rejekts
+```
+
+You can determine the private IPs attached to the east/west gateays with the Civo APIs:
+
+```bash
+civo loadbalancer show --fields private_ip -o custom ${CTX_CLUSTER1}-istio-system-istio-ewgw
+civo loadbalancer show --fields private_ip -o custom ${CTX_CLUSTER2}-istio-system-istio-ewgw
 ```
 
 ### Install monitoring stack
