@@ -31,7 +31,16 @@ brew install argoproj/tap/kubectl-argo-rollouts
 civo ip reserve -n kube
 ```
 
-Now go and set up a DNS record (I use `*.rejekts.kubespaces.io`) with your favorite DNS provider (I use Azure DNS).
+Now go and set up a DNS record (I use `*.rejekts.kubespaces.io`) with your favorite DNS provider (I use Azure DNS). Something along the lines:
+
+```bash
+az network dns record-set a add-record \
+    --resource-group dns \
+    --zone-name kubespaces.io \
+    --record-set-name "*.rejekts" \
+    --ipv4-address 74.220.28.53
+```
+
 
 ### (Optional) Cluster creation
 
