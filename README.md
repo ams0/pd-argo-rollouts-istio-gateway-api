@@ -14,7 +14,9 @@ As presented at Cloud Native Rejekts in Paris in March 2024
 - [ ] (Optional) Create an IP in Civo and setup DNS
 - [ ] (Optional) Create a cluster with Civo
 - [ ] Install Gateway API CRDs
+- [ ] (Optional) Enable Hubble UI
 - [ ] Install Istio
+- [ ] Install monitoring stack
 - [ ] (Optional) Install ArgoCD
 - [ ] Install Argo Rollouts
 - [ ] Install Argo Rollouts Gateway API Plugin
@@ -45,7 +47,14 @@ az network dns record-set a add-record \
 ### (Optional) Cluster creation
 
 ```bash
+civo network create cilium
 civo kubernetes create -p cilium -r traefik2-nodeport -v 1.29.2-k3s1 --merge --save --switch --wait rejekts
+```
+### (Optional) Enable Hubble UI
+
+```bash
+# needs the cilum cli
+cilium hubble enable --ui
 ```
 
 ### Install Gateway API CRDs
@@ -62,10 +71,22 @@ istioctl install --set meshConfig.accessLogFile=/dev/stdout -y \
 
 ```
 
+### Install monitoring stack
+
+```bash
+helm upgrade -i prom kube-prometheus-stack \
+  --repo https://prometheus-community.github.io/helm-charts \
+  --set grafana.defaultDashboardsEnabled=false \
+  --set 'grafana.grafana\.ini.auth\.anonymous.enabled'=true \
+  --set 'grafana.grafana\.ini.auth\.anonymous.org_role'=Admin \
+  --set 'grafana.grafana\.ini.auth\.anonymous.org_name'="Main Org." --create-namespace   -n prometheus
+```
+
 ### (Optional) Install ArgoCD
 
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
 ```
 
 
@@ -92,6 +113,7 @@ data:
     - name: "argoproj-labs/gatewayAPI"
       location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.2.0/gateway-api-plugin-amd64"
 EOF
+kubectl rollout restart deployment -n argo-rollouts argo-rollouts
 ```
 
 ### Apply the ingresses
@@ -100,6 +122,12 @@ EOF
 kubectl apply -f ingress
 ```
 
+
+### Clean up
+
+```bash
+civo kubernetes delete rejekts -y
+```
 
 
 ### Notes
