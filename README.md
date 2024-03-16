@@ -33,8 +33,8 @@ brew install argoproj/tap/kubectl-argo-rollouts
 civo ip reserve -n kube1
 civo ip reserve -n kube2
 
-civo ip list -o custom -f address,name | grep kube1
-civo ip list -o custom -f address,name | grep kube2
+export IP1=$(civo ip list -o custom -f address,name | grep kube1 | cut -f1 -d",")
+export IP2=$(civo ip list -o custom -f address,name | grep kube2 | cut -f1 -d",")
 ```
 
 Now go and set up a DNS record (I use `*.rejekts.kubespaces.io`) with your favorite DNS provider (I use Azure DNS). Something along the lines:
@@ -44,7 +44,7 @@ az network dns record-set a add-record \
     --resource-group dns \
     --zone-name kubespaces.io \
     --record-set-name "*.rejekts" \
-    --ipv4-address 74.220.28.53
+    --ipv4-address $IP1
 ```
 
 
@@ -52,48 +52,40 @@ az network dns record-set a add-record \
 
 ```bash
 civo network create cilium
-civo kubernetes create -p cilium -r traefik2-nodeport -v 1.29.2-k3s1 --merge --save --switch --wait rejekts
+civo kubernetes create -p cilium -r traefik2-nodeport -v 1.29.2-k3s1 --merge --save --switch --wait rejekts1
+civo kubernetes create -p cilium -r traefik2-nodeport -v 1.29.2-k3s1 --merge --save --switch --wait rejekts2
+export CTX_CLUSTER1=rejekts1
+export CTX_CLUSTER2=rejekts2
 ```
 ### (Optional) Enable Hubble UI
 
 ```bash
 # needs the cilum cli
-cilium hubble enable --ui
+cilium --context="${CTX_CLUSTER1}"  hubble enable --ui
+cilium --context="${CTX_CLUSTER2}"  hubble enable --ui
 ```
 
 ### Install Gateway API CRDs
 
 ```bash
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+kubectl --context="${CTX_CLUSTER1}" apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+kubectl --context="${CTX_CLUSTER2}" apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
 ```
 
 ### Install Istio
 
+Multicluster, [multi-primary istio](https://istio.io/latest/docs/setup/install/multicluster/multi-primary/) setup is done as follows:
+
+For cluster 1:
+
 ```bash
-istioctl install --set meshConfig.accessLogFile=/dev/stdout -y \
- --set "values.gateways.istio-ingressgateway.serviceAnnotations.kubernetes\.civo\.com/ipv4-address=74.220.28.53"
+envsubst < istio-operator/cluster1.yaml| istioctl install --context="${CTX_CLUSTER1}" -y -f -
 ```
 
-Multicluster version:
+For cluster 2:
 
 ```bash
-export CTX_CLUSTER1=rejekts
-export CTX_CLUSTER2=rejekts2
-```
-
-```bash
-istioctl --context=$CTX_CLUSTER1 install --set meshConfig.accessLogFile=/dev/stdout -y \
- --set "components.ingressGateways[0].enabled=true" --set "components.ingressGateways[0].name=istio-ingressgateway" \
- --set "components.ingressGateways[1].enabled=true" --set "components.ingressGateways[1].name=istio-ewgw"  \
- --set "components.ingressGateways[0].k8s.serviceAnnotations.kubernetes\.civo\.com/ipv4-address=74.220.28.53" \
- --set values.global.meshID=rejekts --set values.global.multiCluster.clusterName=rejekts1 --set values.global.network=rejekts
-```
-
-Cluster 2 doesn't need public ingress
-```bash
-istioctl --context=$CTX_CLUSTER2 install --set meshConfig.accessLogFile=/dev/stdout -y \
- --set "components.ingressGateways[0].enabled=true" --set "components.ingressGateways[0].name=istio-ewgw" \
- --set values.global.meshID=rejekts --set values.global.multiCluster.clusterName=rejekts2 --set values.global.network=rejekts
+envsubst < istio-operator/cluster2.yaml| istioctl install --context="${CTX_CLUSTER2}" -y -f -
 ```
 
 You can determine the private IPs attached to the east/west gateays with the Civo APIs:
@@ -106,7 +98,7 @@ civo loadbalancer show --fields private_ip -o custom ${CTX_CLUSTER2}-istio-syste
 ### Install monitoring stack
 
 ```bash
-helm upgrade -i prom kube-prometheus-stack \
+helm --kube-context="${CTX_CLUSTER1}" upgrade -i prom kube-prometheus-stack \
   --repo https://prometheus-community.github.io/helm-charts \
   --set grafana.defaultDashboardsEnabled=false \
   --set 'grafana.grafana\.ini.auth\.anonymous.enabled'=true \
@@ -121,12 +113,10 @@ helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 ```
 
-
-
 ### Install Argo Rollouts
 
 ```bash
-helm upgrade -i argo-rollouts argo/argo-rollouts \
+helm --kube-context ${CTX_CLUSTER1} upgrade -i argo-rollouts argo/argo-rollouts \
   --create-namespace -n argo-rollouts \
   --set dashboard.enabled=true
 ```
@@ -134,7 +124,7 @@ helm upgrade -i argo-rollouts argo/argo-rollouts \
 ### Install Argo Rollouts Gateway API Plugin
 
 ```bash
-kubectl apply -f - <<EOF
+kubectl --context ${CTX_CLUSTER1} apply -f - <<EOF
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -148,12 +138,11 @@ EOF
 kubectl rollout restart deployment -n argo-rollouts argo-rollouts
 ```
 
-### Apply the ingresses
+### Apply the ingresses (Gateway and HTTPRoutes)
 
 ```bash
-kubectl apply -f ingress
+kubectl --context ${CTX_CLUSTER1} apply -f ingress
 ```
-
 
 ### Clean up
 
