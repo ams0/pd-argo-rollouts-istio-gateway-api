@@ -83,8 +83,8 @@ helm --kube-context="${CTX_CLUSTER1}" upgrade -i prom kube-prometheus-stack \
 Note in the `prom-grafana-values.yaml` how the Argo Rollout dashboard is added from a url. Now add some Istio dashboards and scraping targets:
 
 ```bash
-kubectl apply monitoring/istio-grafana-dashboards.yaml
-kubectl apply monitoring/service-pod-monitor.yaml
+kubectl apply -f monitoring/istio-grafana-dashboards.yaml
+kubectl apply -f monitoring/service-pod-monitor.yaml
 ```
 
 ### (Optional) Install ArgoCD
