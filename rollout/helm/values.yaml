@@ -1,0 +1,21 @@
+dashboard:
+  enabled: true
+  image:
+    tag: latest
+controller:
+  image:
+    tag: latest
+  replicas: 1
+  metrics:
+    enabled: true
+    service:
+      # -- Metrics service port name
+      portName: metrics
+      # -- Metrics service port
+      port: 8090
+      # -- Service annotations
+      annotations: {}
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: prom

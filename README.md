@@ -2,11 +2,9 @@
 
 As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support!
 
-
 ## Prerequisite
 
 - **Two** kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
-
 
 ## Setup
 
@@ -47,7 +45,6 @@ az network dns record-set a add-record \
     --ipv4-address $IP1
 ```
 
-
 ### (Optional) Cluster creation
 
 ```bash
@@ -57,6 +54,7 @@ civo kubernetes create -p cilium -r traefik2-nodeport -v 1.29.2-k3s1 --merge --s
 export CTX_CLUSTER1=rejekts1
 export CTX_CLUSTER2=rejekts2
 ```
+
 ### (Optional) Enable Hubble UI
 
 ```bash
@@ -116,9 +114,15 @@ helm repo update
 ### Install Argo Rollouts
 
 ```bash
-helm --kube-context ${CTX_CLUSTER1} upgrade -i argo-rollouts argo/argo-rollouts \
+helm upgrade -i argo-rollouts argo/argo-rollouts \
   --create-namespace -n argo-rollouts \
-  --set dashboard.enabled=true
+  --values rollout/helm/values.yaml
+```
+
+Unfortunately some extra permissions are needed for the plugin to work on HTTProutes objects:
+
+```bash
+kubectl apply --context ${CTX_CLUSTER1} rollout/0-clusterrole.yaml
 ```
 
 ### Install Argo Rollouts Gateway API Plugin
@@ -133,7 +137,7 @@ metadata:
 data:
   trafficRouterPlugins: |-
     - name: "argoproj-labs/gatewayAPI"
-      location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.2.0/gateway-api-plugin-amd64"
+      location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.2.0/gateway-api-plugin-linux-amd64"
 EOF
 kubectl rollout restart deployment -n argo-rollouts argo-rollouts
 ```
@@ -144,15 +148,22 @@ kubectl rollout restart deployment -n argo-rollouts argo-rollouts
 kubectl --context ${CTX_CLUSTER1} apply -f ingress
 ```
 
+### Rollout progressive delivery
+
+You can keep an eye on the HTTPRoute weights:
+
+```bash
+watch -n 0.5 "kubectl get httproutes.gateway.networking.k8s.io argo-rollouts-http-route -o json | jq '.spec.rules[].backendRefs'"
+```
+
 ### Clean up
 
 ```bash
 civo kubernetes delete rejekts -y
 ```
 
-
 ### Notes
 
 - We're using the Civo controller manager feature to use a pre-created IP address ([ref](https://github.com/civo/civo-cloud-controller-manager))
 - We use Gateway API in [manual deployment mode](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/#manual-deployment) to attach the `Gateway` resource to an existing `ingressGateway`
-- We set Grafana to no auth access for simplicity 
+- We set Grafana to no auth access for simplicity

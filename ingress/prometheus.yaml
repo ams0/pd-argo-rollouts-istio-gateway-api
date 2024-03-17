@@ -1,30 +1,11 @@
 apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: prometheus-gateway
-  namespace: istio-system
-spec:
-  gatewayClassName: istio
-  addresses:
-  - value: istio-ingressgateway.istio-system.svc.cluster.local
-    type: Hostname
-  listeners:
-  - name: default
-    hostname: "prometheus.rejekts.kubespaces.io"
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
----
-apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: prometheus
   namespace: prometheus
 spec:
   parentRefs:
-  - name: prometheus-gateway
+  - name: http
     namespace: istio-system
   hostnames: ["prometheus.rejekts.kubespaces.io"]
   rules:
