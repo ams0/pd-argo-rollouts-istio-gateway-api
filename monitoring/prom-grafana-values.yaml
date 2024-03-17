@@ -1,0 +1,29 @@
+grafana:
+  image:
+    tag: latest
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      istio:
+        file:
+
+      argo-rollouts:
+        url: https://raw.githubusercontent.com/argoproj/argo-rollouts/master/examples/dashboard.json
+
+  defaultDashboardsEnabled: false
+  grafana.ini:
+    auth.anonymous:
+      enabled: true
+      org_role: "Admin"
+      org_name: "Main Org."
