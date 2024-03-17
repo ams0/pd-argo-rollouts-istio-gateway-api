@@ -1,10 +1,10 @@
-# Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts
+# Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts - Single cluster
 
 As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support!
 
 ## Prerequisite
 
-- **Two** kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
+- A kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
 
 ## Setup
 
@@ -79,6 +79,13 @@ helm --kube-context="${CTX_CLUSTER1}" upgrade -i prom kube-prometheus-stack \
   --create-namespace -n prometheus \
   --repo https://prometheus-community.github.io/helm-charts \
   --values monitoring/prom-grafana-values.yaml
+```
+
+Note in the `prom-grafana-values.yaml` how the Argo Rollout dashboard is added from a url. Now add some Istio dashboards and scraping targets:
+
+```bash
+kubectl apply monitoring/istio-grafana-dashboards.yaml
+kubectl apply monitoring/service-pod-monitor.yaml
 ```
 
 ### (Optional) Install ArgoCD

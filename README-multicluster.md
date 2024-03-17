@@ -1,11 +1,11 @@
-# Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts
+# Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts - Multicluster version 
 
 As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support!
 
 ## Prerequisite
 
 - **Two** kubernetes cluster (we're using the great [Civo](https://www.civo.com) Kubernetes service)
-
+- The step
 ## Setup
 
 - [ ] (Optional) Install Argo Rollouts kubectl plugin

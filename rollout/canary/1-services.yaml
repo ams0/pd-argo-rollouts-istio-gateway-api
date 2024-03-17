@@ -12,7 +12,6 @@ spec:
   selector:
     app: rollouts-demo
 ---
----
 apiVersion: v1
 kind: Service
 metadata:
