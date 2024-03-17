@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-rollouts-stable-service
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: rollouts-stable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: rollout-stable
+  name: argo-rollouts-stable-service
+  namespace: default
+spec:
+  replicas: 0                                  # Scale down existing deployment
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rollouts-stable
+  template:
+    metadata:
+      labels:
+        app: rollouts-stable
+    spec:
+      containers:
+        - name: rollouts-demo
+          image: kostiscodefresh/summer-of-k8s-app:v1
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 5m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-rollouts-canary-service
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: rollouts-canary
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: rollout-canary
+  name: argo-rollouts-canary-service
+  namespace: default
+spec:
+  replicas: 0                                  # Scale down existing deployment
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rollouts-canary
+  template:
+    metadata:
+      labels:
+        app: rollouts-canary
+    spec:
+      containers:
+        - name: rollouts-demo
+          image: kostiscodefresh/summer-of-k8s-app:v2
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 5m

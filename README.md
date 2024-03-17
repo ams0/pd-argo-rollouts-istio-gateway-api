@@ -29,7 +29,6 @@ brew install argoproj/tap/kubectl-argo-rollouts
 
 ```bash
 civo ip reserve -n kube1
-
 export IP1=$(civo ip list -o custom -f address,name | grep kube1 | cut -f1 -d",")
 ```
 
