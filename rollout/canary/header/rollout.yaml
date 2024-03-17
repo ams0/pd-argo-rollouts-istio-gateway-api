@@ -11,10 +11,14 @@ spec:
       stableService: argo-rollouts-stable-service # our created stable service
       trafficRouting:
         managedRoutes:
-        - name: argo-rollouts-http-route
+        - name: canary-route-ten
+        - name: canary-route-half
         plugins:
           argoproj-labs/gatewayAPI:
-            httpRoute: argo-rollouts-http-route
+            httpRoutes:
+              - name: argo-rollouts-http-route
+              - name: argo-rollouts-header-route
+                useHeaderRoutes: true
             namespace: default
       steps:
       - setWeight: 30

@@ -18,6 +18,9 @@ As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster s
 - [ ] (Optional) Install ArgoCD
 - [ ] Install Argo Rollouts
 - [ ] Install Argo Rollouts Gateway API Plugin
+- [ ] (Optional) Deploy a sample httpbin app
+- [ ] Apply the ingresses (Gateway and HTTPRoutes)
+
 
 ### (Optional) Install Argo Rollouts kubectl plugin
 
@@ -110,7 +113,7 @@ helm upgrade -i argo-rollouts argo/argo-rollouts \
 > Unfortunately some extra permissions are needed for the plugin to work on HTTProutes objects:
 
 ```bash
-kubectl apply --context ${CTX_CLUSTER1} rollout/rbac/0-clusterrole.yaml
+kubectl apply --context ${CTX_CLUSTER1} -f rollout/rbac/0-clusterrole.yaml
 ```
 
 ### Install Argo Rollouts Gateway API Plugin
@@ -118,6 +121,12 @@ kubectl apply --context ${CTX_CLUSTER1} rollout/rbac/0-clusterrole.yaml
 ```bash
 kubectl apply -f rollout/plugins/gatewayapi-rollout-plugin-cm.yaml
 kubectl rollout restart deployment -n argo-rollouts argo-rollouts
+```
+
+### (Optional) Deploy a sample httpbin app
+
+```bash
+kubectl apply -f httpbin/
 ```
 
 ### Apply the ingresses (Gateway and HTTPRoutes)
@@ -130,16 +139,64 @@ kubectl --context ${CTX_CLUSTER1} apply -f ingress
 > Argo Rollouts dashboard doesn't work thru the Istio ingress gateway (the infamous `You need to enable JavaScript to run this app.` error). It's anyway better to instead use it only via port-forwarding, as you can actually can trigger (and we will show it) releases thru the UI (it can be disabled).
 
 
+### Access the apps thru the Gateway API-enabled istio ingress
+
+You can reach the monitoring stack and the httpbin app via:
+
+```bash
+open http://grafana.rejekts.kubespaces.io
+open http://hubble.rejekts.kubespaces.io
+open http://prometheus.rejekts.kubespaces.io
+open http://rollouts.rejekts.kubespaces.io #won't work
+open http://httpbin.rejekts.kubespaces.io/get
+```
 
 ### Rollout progressive delivery: Canary
 
-
-
-Check the result:
+We'll use Rollout as a drop-in replacement for Deployments, so we will just need to deploy the services and HTTProutes:
 
 ```bash
-while :; do curl http://app.rejekts.kubespaces.io/callme; sleep 1; done
+kubectl apply -f rollout/canary/1-services.yaml
+kubectl apply -f rollout/canary/2-httproute.yaml
 ```
+
+Lastly, create the Rollout resource:
+
+```bash
+kubectl apply -f rollout/canary/3-rollout.yaml
+```
+
+Check the pods being created:
+
+```bash
+kubectl get po
+NAME                             READY   STATUS    RESTARTS   AGE
+rollouts-demo-668468789b-957zb   1/1     Running   0          22s
+rollouts-demo-668468789b-6crk6   1/1     Running   0          22s
+rollouts-demo-668468789b-7pb24   1/1     Running   0          22s
+```
+
+If you the Argo Rollout plugin, you can check the status here:
+
+```bash
+kubectl argo rollouts get rollout rollouts-demo | tail -7
+NAME                                       KIND        STATUS     AGE    INFO
+⟳ rollouts-demo                            Rollout     ✔ Healthy  4m12s
+└──# revision:1
+   └──⧉ rollouts-demo-668468789b           ReplicaSet  ✔ Healthy  4m12s  stable
+      ├──□ rollouts-demo-668468789b-6crk6  Pod         ✔ Running  4m12s  ready:1/1
+      ├──□ rollouts-demo-668468789b-7pb24  Pod         ✔ Running  4m12s  ready:1/1
+      ├──□ rollouts-demo-668468789b-957zb  Pod         ✔ Running  4m12s  ready:1/1
+      ├──□ rollouts-demo-668468789b-h7nsc  Pod         ✔ Running  5s     ready:1/1
+      └──□ rollouts-demo-668468789b-wmtv4  Pod         ✔ Running  5s     ready:1/1
+```
+
+Check that we're serving the first revisions (1.0) of our app
+
+```bash
+while :; do curl "http://app.rejekts.kubespaces.io/callme"; sleep 1; done
+```
+
 
 You can keep an eye on the HTTPRoute weights:
 
