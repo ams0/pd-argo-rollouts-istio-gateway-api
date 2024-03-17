@@ -197,6 +197,7 @@ Check that we're serving the first revisions (1.0) of our app
 while :; do curl "http://app.rejekts.kubespaces.io/callme"; sleep 1; done
 ```
 
+Go ahead and change the image version on the dashboard, and observe the version rolling out both as new pods come up and as the HTTProute weights are shifted (and the stable/canary versions are swapped at the end of the process).
 
 You can keep an eye on the HTTPRoute weights:
 
@@ -204,10 +205,15 @@ You can keep an eye on the HTTPRoute weights:
 watch -n 0.5 "kubectl get httproutes.gateway.networking.k8s.io argo-rollouts-http-route -o json | jq '.spec.rules[].backendRefs'"
 ```
 
+### More demos (to do)
+
+- [ ] Demonstrate the `workloadRef` feature.
+- [ ] Demonstrate the header based routing feature
+
 ### Clean up
 
 ```bash
-civo kubernetes delete rejekts -y
+civo kubernetes delete rejekts1 -y
 ```
 
 ### Notes

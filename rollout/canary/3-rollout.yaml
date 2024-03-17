@@ -18,11 +18,11 @@ spec:
             namespace: default
       steps:
       - setWeight: 30
-      - pause: { duration: 30s }
+      - pause: { duration: 20s }
       - setWeight: 60
-      - pause: { duration: 30s }
+      - pause: { duration: 20s }
       - setWeight: 100
-      - pause: { duration: 30s }
+      - pause: { duration: 20s }
   revisionHistoryLimit: 2
   selector:
     matchLabels:
