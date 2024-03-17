@@ -1,6 +1,6 @@
 # Progressive Delivery with Istio and Gateway API plugin for Argo Rollouts - Single cluster
 
-As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support!
+As presented at Cloud Native Rejekts in Paris in March 2024. With multicluster support! [Slides](https://docs.google.com/presentation/d/1yulk4oTLgfv1G3wxUtk6ehv0OsaNkEbX67siCdq6OjE/edit#slide=id.ga9fa940987_0_102)
 
 ## Prerequisite
 
